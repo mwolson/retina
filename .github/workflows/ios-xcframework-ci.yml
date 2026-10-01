@@ -21,6 +21,12 @@ on:
 permissions:
   contents: read
 
+# Explicit bash runs steps with -eo pipefail, so a failing command in the
+# middle of a pipeline fails the step.
+defaults:
+  run:
+    shell: bash
+
 env:
   CARGO_TERM_COLOR: always
   XCODE_APP: /Applications/Xcode_26.6.app
@@ -30,6 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
+        shell: bash
         working-directory: ios/amp-rtsp-client
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
