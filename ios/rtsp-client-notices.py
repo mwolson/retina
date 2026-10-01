@@ -113,38 +113,70 @@ def is_proc_macro(package):
 
 
 def permissive(expression):
-    if not expression:
+    """True when an SPDX license expression lets us use the crate under allowlisted terms.
+
+    OR needs one allowed side and AND needs both. A license with an exception
+    counts only when the whole "LICENSE WITH EXCEPTION" pair is allowlisted.
+    Cargo's old "MIT/Apache-2.0" form reads as OR. Anything that does not parse
+    completely (unbalanced parentheses, a missing operand, two licenses with no
+    operator) is not permissive, so the crate needs review.
+    """
+    try:
+        return SpdxExpression(expression or "").evaluate()
+    except ValueError:
         return False
-    tokens = re.findall(r"\(|\)|[^\s()]+(?:\s+WITH\s+[^\s()]+)?", expression.replace("/", " OR "))
-    position = 0
 
-    def parse_or():
-        nonlocal position
-        result = parse_and()
-        while position < len(tokens) and tokens[position] == "OR":
-            position += 1
-            result = parse_and() or result
+
+class SpdxExpression:
+    OPERATORS = {"AND", "OR", "WITH"}
+
+    def __init__(self, text):
+        self.tokens = re.findall(r"\(|\)|[^\s()]+", text.replace("/", " OR "))
+        self.position = 0
+
+    def evaluate(self):
+        result = self.parse_or()
+        if self.position != len(self.tokens):
+            raise ValueError(f"unexpected {self.tokens[self.position]!r}")
         return result
 
-    def parse_and():
-        nonlocal position
-        result = parse_atom()
-        while position < len(tokens) and tokens[position] == "AND":
-            position += 1
-            result = parse_atom() and result
-        return result
+    def parse_or(self):
+        results = [self.parse_and()]
+        while self.accept("OR"):
+            results.append(self.parse_and())
+        return any(results)
 
-    def parse_atom():
-        nonlocal position
-        token = tokens[position]
-        position += 1
-        if token == "(":
-            result = parse_or()
-            position += 1
+    def parse_and(self):
+        results = [self.parse_atom()]
+        while self.accept("AND"):
+            results.append(self.parse_atom())
+        return all(results)
+
+    def parse_atom(self):
+        if self.accept("("):
+            result = self.parse_or()
+            if not self.accept(")"):
+                raise ValueError("missing )")
             return result
-        return re.sub(r"\s+", " ", token) in ALLOWED
+        name = self.identifier()
+        if self.accept("WITH"):
+            name = f"{name} WITH {self.identifier()}"
+        return name in ALLOWED
 
-    return parse_or()
+    def identifier(self):
+        if self.position == len(self.tokens):
+            raise ValueError("expression ends early")
+        token = self.tokens[self.position]
+        if token in self.OPERATORS or token in "()":
+            raise ValueError(f"expected a license, found {token!r}")
+        self.position += 1
+        return token
+
+    def accept(self, token):
+        if self.position < len(self.tokens) and self.tokens[self.position] == token:
+            self.position += 1
+            return True
+        return False
 
 
 def license_files(package):

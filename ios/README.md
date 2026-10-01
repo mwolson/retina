@@ -16,7 +16,9 @@ files, so the fork rebases onto upstream Retina without conflicts.
 - `amp-rtsp-client/licenses/`: license texts for crates that do not ship one.
 - `rtsp-client-notices.py`: fails when a locked crate lacks a permissive
   license, and writes `Retina-LICENSE.txt` (every crate linked into the
-  library) and `RustStandardLibrary-LICENSE.txt`.
+  library) and `RustStandardLibrary-LICENSE.txt`. A license expression that
+  does not parse completely counts as not permissive.
+  `test_rtsp_client_notices.py` tests that check.
 - `build-xcframework.sh`: builds the release zip on macOS.
 
 ## Build locally
@@ -54,6 +56,7 @@ cd ios/amp-rtsp-client
 cargo fmt --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked
+python3 ../test_rtsp_client_notices.py
 ```
 
 ## Releases

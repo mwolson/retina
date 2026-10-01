@@ -44,7 +44,9 @@ jobs:
       - run: cargo clippy --locked --lib --target aarch64-apple-ios -- -D warnings
       - run: cargo test --locked
       - name: License allowlist
-        run: python3 ../rtsp-client-notices.py --out "$RUNNER_TEMP/notices"
+        run: |
+          python3 ../test_rtsp_client_notices.py
+          python3 ../rtsp-client-notices.py --out "$RUNNER_TEMP/notices"
 
   build:
     needs: check
