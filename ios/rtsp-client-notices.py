@@ -119,7 +119,8 @@ def permissive(expression):
     counts only when the whole "LICENSE WITH EXCEPTION" pair is allowlisted.
     Cargo's old "MIT/Apache-2.0" form reads as OR. Anything that does not parse
     completely (unbalanced parentheses, a missing operand, two licenses with no
-    operator) is not permissive, so the crate needs review.
+    operator, a name that is not an SPDX license or exception identifier) is not
+    permissive, so the crate needs review.
     """
     try:
         return SpdxExpression(expression or "").evaluate()
@@ -129,6 +130,9 @@ def permissive(expression):
 
 class SpdxExpression:
     OPERATORS = {"AND", "OR", "WITH"}
+    IDSTRING = r"[A-Za-z0-9.-]+"
+    LICENSE = re.compile(rf"(?:DocumentRef-{IDSTRING}:)?LicenseRef-{IDSTRING}|(?!(?:DocumentRef|LicenseRef)-){IDSTRING}\+?")
+    EXCEPTION = re.compile(rf"AdditionRef-{IDSTRING}|(?!AdditionRef-){IDSTRING}")
 
     def __init__(self, text):
         self.tokens = re.findall(r"\(|\)|[^\s()]+", text.replace("/", " OR "))
@@ -158,17 +162,17 @@ class SpdxExpression:
             if not self.accept(")"):
                 raise ValueError("missing )")
             return result
-        name = self.identifier()
+        name = self.identifier(self.LICENSE, "license")
         if self.accept("WITH"):
-            name = f"{name} WITH {self.identifier()}"
+            name = f"{name} WITH {self.identifier(self.EXCEPTION, 'exception')}"
         return name in ALLOWED
 
-    def identifier(self):
+    def identifier(self, pattern, kind):
         if self.position == len(self.tokens):
-            raise ValueError("expression ends early")
+            raise ValueError(f"expression ends before a {kind}")
         token = self.tokens[self.position]
-        if token in self.OPERATORS or token in "()":
-            raise ValueError(f"expected a license, found {token!r}")
+        if token in self.OPERATORS or not pattern.fullmatch(token):
+            raise ValueError(f"expected a {kind}, found {token!r}")
         self.position += 1
         return token
 
