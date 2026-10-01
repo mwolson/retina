@@ -61,14 +61,24 @@ python3 ../test_rtsp_client_notices.py
 
 ## Releases
 
+Before the first release, enable immutable releases for the repository
+(Settings, General, Releases). Published releases then cannot have their assets
+or tag changed, which protects the SHA-256 that consumers pin.
+
 1. Bump `version` in `amp-rtsp-client/Cargo.toml` (and rebase onto upstream
    Retina first if the release should pick up a new Retina).
 2. Push a tag `amp-rtsp-client-v<version>` on that commit. The tag prefix keeps
    these tags apart from upstream Retina's `v*` tags.
 3. `.github/workflows/ios-xcframework-publish.yml` runs the checks, builds the
    zip on a macOS runner with a pinned Xcode, attests its build provenance, and
-   attaches the zip and `SHA256SUMS` to a draft release.
+   creates a draft release with the zip and `SHA256SUMS`, then checks the
+   uploaded assets' digests.
 4. Review the draft and publish it by hand.
+
+The workflow only creates releases. If a release for the tag already exists,
+draft or published, it fails without touching it. To rebuild a draft, delete it
+by hand and rerun the workflow. A published release is never rebuilt; release a
+new version instead.
 
 Consumers pin the release URL and SHA-256, and can verify provenance with:
 
