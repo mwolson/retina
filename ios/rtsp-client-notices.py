@@ -119,8 +119,15 @@ def permissive(expression):
     counts only when the whole "LICENSE WITH EXCEPTION" pair is allowlisted.
     Cargo's old "MIT/Apache-2.0" form reads as OR. Anything that does not parse
     completely (unbalanced parentheses, a missing operand, two licenses with no
-    operator, a name that is not an SPDX license or exception identifier) is not
-    permissive, so the crate needs review.
+    operator, a name without SPDX identifier syntax) is not permissive, so the
+    crate needs review.
+
+    Names are checked for SPDX syntax only, not against the SPDX license list:
+    a license is an idstring with an optional "+" or a complete LicenseRef or
+    DocumentRef:LicenseRef reference, and an exception is an idstring or a
+    complete AdditionRef reference (a LicenseRef or DocumentRef there is
+    rejected). A well-formed but unknown name is harmless, because only
+    allowlisted names make a branch permissive.
     """
     try:
         return SpdxExpression(expression or "").evaluate()
@@ -132,7 +139,7 @@ class SpdxExpression:
     OPERATORS = {"AND", "OR", "WITH"}
     IDSTRING = r"[A-Za-z0-9.-]+"
     LICENSE = re.compile(rf"(?:DocumentRef-{IDSTRING}:)?LicenseRef-{IDSTRING}|(?!(?:DocumentRef|LicenseRef)-){IDSTRING}\+?")
-    EXCEPTION = re.compile(rf"AdditionRef-{IDSTRING}|(?!AdditionRef-){IDSTRING}")
+    EXCEPTION = re.compile(rf"AdditionRef-{IDSTRING}|(?!(?:AdditionRef|DocumentRef|LicenseRef)-){IDSTRING}")
 
     def __init__(self, text):
         self.tokens = re.findall(r"\(|\)|[^\s()]+", text.replace("/", " OR "))

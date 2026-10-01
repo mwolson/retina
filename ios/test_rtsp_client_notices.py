@@ -63,6 +63,8 @@ class PermissiveTests(unittest.TestCase):
             "MIT OR !!!",
             "MIT OR GPL-3.0-only,",
             "MIT OR GPL-3.0-only WITH !!!",
+            "MIT OR GPL-3.0-only WITH LicenseRef-x",
+            "MIT OR GPL-3.0-only WITH DocumentRef-x",
             "MIT OR LicenseRef-",
             "MIT OR DocumentRef-x:",
             "MIT OR DocumentRef-:LicenseRef-x",

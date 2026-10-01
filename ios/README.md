@@ -17,7 +17,10 @@ files, so the fork rebases onto upstream Retina without conflicts.
 - `rtsp-client-notices.py`: fails when a locked crate lacks a permissive
   license, and writes `Retina-LICENSE.txt` (every crate linked into the
   library) and `RustStandardLibrary-LICENSE.txt`. A license expression that
-  does not parse completely counts as not permissive.
+  does not parse completely, or has a name without SPDX identifier syntax,
+  counts as not permissive. Names are not checked against the SPDX license
+  list; an unknown name is harmless because only allowlisted names make an
+  expression permissive.
   `test_rtsp_client_notices.py` tests that check.
 - `build-xcframework.sh`: builds the release zip on macOS.
 
