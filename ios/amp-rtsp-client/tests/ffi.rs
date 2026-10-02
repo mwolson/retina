@@ -1,4 +1,4 @@
-// Copyright (C) The Retina Authors
+// Copyright (C) Mike Olson
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 //! Drives the C interface against a scripted RTSP server that sends real camera

@@ -1,9 +1,11 @@
 [package]
 name = "amp-rtsp-client"
 version = "0.1.0"
+authors = ["Mike Olson"]
 edition = "2021"
 rust-version = "1.88"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/mwolson/retina"
 publish = false
 description = "RTSP H.264 client for the native AMP iOS app, wrapping Retina behind a small C ABI"
 

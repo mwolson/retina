@@ -1,4 +1,4 @@
-// Copyright (C) The Retina Authors
+// Copyright (C) Mike Olson
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 //! One RTSP session: DESCRIBE, SETUP of the H.264 video stream over TCP, PLAY,

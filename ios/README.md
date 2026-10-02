@@ -4,7 +4,13 @@ This directory is not part of upstream Retina. It holds `amp-rtsp-client`, a
 small Rust library that wraps Retina behind a C interface for the native AMP
 iOS app, and the scripts that publish it as a prebuilt
 `AmpRtspClient.xcframework`. Everything lives under `ios/` plus two workflow
-files, so the fork rebases onto upstream Retina without conflicts.
+files and a small change to `.github/workflows/check-license.py` (files under
+`ios/` carry their own copyright holder), so the fork rebases onto upstream
+Retina with few conflicts.
+
+`amp-rtsp-client` is Copyright (C) Mike Olson and, like Retina, licensed under
+either the MIT license or the Apache License 2.0
+(`amp-rtsp-client/LICENSE-MIT`, `amp-rtsp-client/LICENSE-APACHE`).
 
 - `amp-rtsp-client/`: the crate. It depends on Retina by path (`../..`), so a
   release uses exactly the Retina source in the same commit. It has its own
@@ -15,8 +21,8 @@ files, so the fork rebases onto upstream Retina without conflicts.
   iOS targets.
 - `amp-rtsp-client/licenses/`: license texts for crates that do not ship one.
 - `rtsp-client-notices.py`: fails when a locked crate lacks a permissive
-  license, and writes `Retina-LICENSE.txt` (every crate linked into the
-  library) and `RustStandardLibrary-LICENSE.txt`. A license expression that
+  license, and writes `Retina-LICENSE.txt` (amp-rtsp-client's own notice, then
+  every crate linked into the library) and `RustStandardLibrary-LICENSE.txt`. A license expression that
   does not parse completely, or has a name without SPDX identifier syntax,
   counts as not permissive. Names are not checked against the SPDX license
   list; an unknown name is harmless because only allowlisted names make an
@@ -39,10 +45,12 @@ that both libraries export the C entry points, and writes
 
 - `AmpRtspClient.xcframework/` with the static library and headers per slice
 - `licenses/Retina-LICENSE.txt` and `licenses/RustStandardLibrary-LICENSE.txt`,
-  which an app linking the library must ship
-- `manifest.json` with the crate and Retina versions, source commit, Rust
-  toolchain, Xcode and SDK versions, targets, deployment target and the SHA-256
-  of every file
+  which an app linking the library must ship. The first one carries
+  amp-rtsp-client's own copyright and license texts as well as Retina's and
+  every dependency's.
+- `manifest.json` with the crate version and license, Retina version, source
+  commit, Rust toolchain, Xcode and SDK versions, targets, deployment target,
+  the notice files to ship and the SHA-256 of every file
 
 Two builds of the same commit from the same checkout path, with the same
 toolchain and Xcode, give a byte-identical zip: paths are remapped out of the

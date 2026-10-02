@@ -14,6 +14,7 @@ has-license.py
     This is useful in a pre-commit hook, as in
     git-format-staged --no-write --formatter '.../has-license.py' '*.rs'
 """
+import os
 import re
 import sys
 
@@ -27,10 +28,13 @@ EXPECTED_LINES = [
   re.compile(r'SPDX-License-Identifier: MIT OR Apache-2\.0'),
 ]
 
-def has_license(f):
-  """Returns if all of EXPECTED_LINES are present within the first
+# Fork addition: the AMP iOS wrapper under ios/ has its own copyright holder.
+IOS_EXPECTED_LINES = [re.compile(r'Copyright \(C\) Mike Olson'), EXPECTED_LINES[1]]
+
+def has_license(f, expected_lines=EXPECTED_LINES):
+  """Returns if all of expected_lines are present within the first
   MAX_LINE_COUNT lines of f."""
-  needed = set(EXPECTED_LINES)
+  needed = set(expected_lines)
   i = 0
   for line in f:
     if i == 10:
@@ -46,8 +50,9 @@ def has_license(f):
 
 
 def file_has_license(filename):
+  in_ios = os.path.normpath(filename).split(os.sep)[0] == 'ios'
   with open(filename, 'r') as f:
-    return has_license(f)
+    return has_license(f, IOS_EXPECTED_LINES if in_ios else EXPECTED_LINES)
 
 
 def main(args):

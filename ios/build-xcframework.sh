@@ -44,8 +44,9 @@ RUSTC="$(rustup which rustc)"
 export RUSTC
 PATH="$(dirname "$RUSTC"):$PATH"
 rustc_version="$(rustc --version)"
-crate_version="$(cargo metadata --locked --no-deps --format-version 1 |
-    python3 -c 'import json, sys; print(json.load(sys.stdin)["packages"][0]["version"])')"
+crate_metadata="$(cargo metadata --locked --no-deps --format-version 1)"
+crate_version="$(python3 -c 'import json, sys; print(json.load(sys.stdin)["packages"][0]["version"])' <<<"$crate_metadata")"
+crate_license="$(python3 -c 'import json, sys; print(json.load(sys.stdin)["packages"][0]["license"])' <<<"$crate_metadata")"
 retina_version="$(cargo metadata --locked --format-version 1 |
     python3 -c 'import json, sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"] == "retina"))')"
 source_commit="$(git -C "$REPO_DIR" rev-parse HEAD)"
@@ -91,7 +92,7 @@ xcodebuild -create-xcframework \
     -output "$STAGE_DIR/AmpRtspClient.xcframework" >/dev/null
 
 zip_name="AmpRtspClient-$crate_version.xcframework.zip"
-CRATE_VERSION="$crate_version" DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET" IOS_SDK="$ios_sdk" \
+CRATE_LICENSE="$crate_license" CRATE_VERSION="$crate_version" DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET" IOS_SDK="$ios_sdk" \
     RETINA_VERSION="$retina_version" RUSTC_VERSION="$rustc_version" RUST_TOOLCHAIN="$toolchain" \
     SOURCE_COMMIT="$source_commit" TARGETS="${TARGETS[*]}" XCODE_VERSION="$xcode_version" \
     python3 - "$STAGE_DIR" "$OUT_DIR" "$zip_name" <<'PY'
@@ -114,6 +115,7 @@ info_path.write_bytes(plistlib.dumps(info, sort_keys=True))
 
 manifest = {
     "crate": "amp-rtsp-client",
+    "crate_license": os.environ["CRATE_LICENSE"],
     "crate_version": os.environ["CRATE_VERSION"],
     "files": {
         str(path.relative_to(stage)): sha256(path)
@@ -122,6 +124,8 @@ manifest = {
     },
     "ios_deployment_target": os.environ["DEPLOYMENT_TARGET"],
     "ios_sdk": os.environ["IOS_SDK"],
+    # Notice files an app linking the xcframework must ship.
+    "notices": sorted(path.relative_to(stage).as_posix() for path in (stage / "licenses").glob("*.txt")),
     "retina_version": os.environ["RETINA_VERSION"],
     "rustc": os.environ["RUSTC_VERSION"],
     "rust_toolchain": os.environ["RUST_TOOLCHAIN"],

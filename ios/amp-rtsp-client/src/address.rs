@@ -1,4 +1,4 @@
-// Copyright (C) The Retina Authors
+// Copyright (C) Mike Olson
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 //! Parses the camera URL and moves its userinfo into Retina credentials.

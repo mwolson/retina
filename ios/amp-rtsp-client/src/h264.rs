@@ -1,4 +1,4 @@
-// Copyright (C) The Retina Authors
+// Copyright (C) Mike Olson
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 //! H.264 parameter and frame helpers between Retina and the C interface.

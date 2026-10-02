@@ -1,4 +1,4 @@
-// Copyright (C) The Retina Authors
+// Copyright (C) Mike Olson
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use amp_rtsp_client::h264::{is_avcc, ParameterSets, ParameterTracker};

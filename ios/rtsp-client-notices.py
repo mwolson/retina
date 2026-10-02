@@ -3,8 +3,8 @@
 
 Reads `cargo metadata` for amp-rtsp-client, fails if any locked crate lacks a
 permissive license, and writes Retina-LICENSE.txt with the license texts of
-every crate linked into the iOS static library (Retina itself comes from this
-repository by path). It also writes RustStandardLibrary-LICENSE.txt from the
+amp-rtsp-client itself (copyright Mike Olson) and every crate linked into the
+iOS static library (Retina itself comes from this repository by path). It also writes RustStandardLibrary-LICENSE.txt from the
 pinned toolchain's share/doc/rust/COPYRIGHT-library.html, and fails if the
 active rustc is not the version amp-rtsp-client/rust-toolchain.toml pins.
 build-xcframework.sh runs it for every build and ships both files in the
@@ -62,14 +62,15 @@ def main():
     everything = metadata(None)
     linked = linked_packages(metadata(TARGET))
     root = everything["resolve"]["root"]
-    problems = [p for p in everything["packages"] if p["id"] != root and not permissive(p["license"])]
+    wrapper = next(p for p in everything["packages"] if p["id"] == root)
+    problems = [p for p in everything["packages"] if not permissive(p["license"])]
     if args.audit:
         args.audit.write_text(audit(everything, linked))
     if problems:
         for package in problems:
             print(f"Not permissive: {package['name']} {package['version']} ({package['license']})", file=sys.stderr)
         sys.exit(1)
-    rendered = {NOTICES: notices(linked), STD_NOTICES: std_notices(pinned_rustc())}
+    rendered = {NOTICES: notices([wrapper] + linked), STD_NOTICES: std_notices(pinned_rustc())}
     if args.check:
         stale = [name for name, text in rendered.items() if read(args.check / name) != text]
         for name in stale:
@@ -200,13 +201,15 @@ def license_files(package):
 
 
 def notices(linked):
+    """Notices for the crates compiled into the library, amp-rtsp-client itself first."""
     lines = [
         "Retina RTSP client and its Rust dependencies",
         "",
         "Camera streams play through amp-rtsp-client, a small Rust library built on",
-        "Retina (https://github.com/scottlamb/retina). The crates below are compiled",
-        "into the app, each shown with its version, declared license and source. Their",
-        "license texts follow, each printed once with the crates that ship it.",
+        "Retina (https://github.com/scottlamb/retina). It and the crates below are",
+        "compiled into the app, each shown with its version, declared license and",
+        "source. Their license texts follow, each printed once with the crates that",
+        "ship it.",
         "",
     ]
     lines += [f"{p['name']} {p['version']} ({p['license']}) {p.get('repository') or ''}".rstrip() for p in linked]
