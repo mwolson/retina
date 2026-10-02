@@ -1,16 +1,15 @@
 # AmpRtspClient for iOS
 
 This directory is not part of upstream Retina. It holds `amp-rtsp-client`, a
-small Rust library that wraps Retina behind a C interface for the native AMP
-iOS app, and the scripts that publish it as a prebuilt
-`AmpRtspClient.xcframework`. Everything lives under `ios/` plus two workflow
-files and a small change to `.github/workflows/check-license.py` (files under
-`ios/` carry their own copyright holder), so the fork rebases onto upstream
-Retina with few conflicts.
+small Rust library that wraps Retina behind a C interface for the native AMP iOS
+app, and the scripts that publish it as a prebuilt `AmpRtspClient.xcframework`.
+Everything lives under `ios/` plus two workflow files and a small change to
+`.github/workflows/check-license.py` (files under `ios/` carry their own
+copyright holder), so the fork rebases onto upstream Retina with few conflicts.
 
 `amp-rtsp-client` is Copyright (C) Mike Olson and, like Retina, licensed under
-either the MIT license or the Apache License 2.0
-(`amp-rtsp-client/LICENSE-MIT`, `amp-rtsp-client/LICENSE-APACHE`).
+either the MIT license or the Apache License 2.0 (`amp-rtsp-client/LICENSE-MIT`,
+`amp-rtsp-client/LICENSE-APACHE`).
 
 - `amp-rtsp-client/`: the crate. It depends on Retina by path (`../..`), so a
   release uses exactly the Retina source in the same commit. It has its own
@@ -22,12 +21,11 @@ either the MIT license or the Apache License 2.0
 - `amp-rtsp-client/licenses/`: license texts for crates that do not ship one.
 - `rtsp-client-notices.py`: fails when a locked crate lacks a permissive
   license, and writes `Retina-LICENSE.txt` (amp-rtsp-client's own notice, then
-  every crate linked into the library) and `RustStandardLibrary-LICENSE.txt`. A license expression that
-  does not parse completely, or has a name without SPDX identifier syntax,
-  counts as not permissive. Names are not checked against the SPDX license
-  list; an unknown name is harmless because only allowlisted names make an
-  expression permissive.
-  `test_rtsp_client_notices.py` tests that check.
+  every crate linked into the library) and `RustStandardLibrary-LICENSE.txt`. A
+  license expression that does not parse completely, or has a name without SPDX
+  identifier syntax, counts as not permissive. Names are not checked against the
+  SPDX license list; an unknown name is harmless because only allowlisted names
+  make an expression permissive. `test_rtsp_client_notices.py` tests that check.
 - `build-xcframework.sh`: builds the release zip on macOS.
 
 ## Build locally
@@ -70,33 +68,88 @@ cargo test --locked
 python3 ../test_rtsp_client_notices.py
 ```
 
-## Releases
+## Releasing
 
-Before the first release, enable immutable releases for the repository
-(Settings, General, Releases). Published releases then cannot have their assets
-or tag changed, which protects the SHA-256 that consumers pin.
+Releases come from tags `amp-rtsp-client-v<version>`, which stay apart from
+upstream Retina's `v*` tags. The fork's `main` carries this directory on top of
+upstream, and `ios-xcframework` is the working branch for it. Immutable releases
+are enabled for the repository, so a published release's assets and tag cannot
+change and consumers can rely on the SHA-256 they pin.
 
-1. Bump `version` in `amp-rtsp-client/Cargo.toml` (and rebase onto upstream
-   Retina first if the release should pick up a new Retina).
-2. Push a tag `amp-rtsp-client-v<version>` on that commit. The tag prefix keeps
-   these tags apart from upstream Retina's `v*` tags.
-3. `.github/workflows/ios-xcframework-publish.yml` runs the checks, builds the
-   zip on a macOS runner with a pinned Xcode, attests its build provenance, and
-   creates a draft release with the zip and `SHA256SUMS`, then checks the
-   uploaded assets' digests.
-4. Review the draft and publish it by hand.
+1. Check for uncommitted changes and fetch tags:
 
-The workflow only creates releases. If a release for the tag already exists,
-draft or published, it fails without touching it. To rebuild a draft, delete it
-by hand and rerun the workflow. A published release is never rebuilt; release a
-new version instead.
+   ```sh
+   git status
+   git fetch --tags origin
+   ```
 
-Consumers pin the release URL and SHA-256, and can verify provenance with:
+   To pick up a new Retina, rebase `ios-xcframework` onto the upstream release
+   first, then force-push `ios-xcframework` and `main` with
+   `--force-with-lease`. Earlier release tags keep their commits.
 
-```bash
-gh attestation verify AmpRtspClient-<version>.xcframework.zip --repo mwolson/retina \
-    --signer-workflow mwolson/retina/.github/workflows/ios-xcframework-publish.yml
-```
+2. Run the full checks: the Rust checks and parser tests above, plus
+   `actionlint` on the workflows and `shellcheck ios/build-xcframework.sh`.
+   Build the zip on a Mac with `ios/build-xcframework.sh`.
+
+3. If the release changes the version, update `version` in
+   `amp-rtsp-client/Cargo.toml`, run `cargo update -p amp-rtsp-client` in that
+   directory, and commit the bump separately as
+   `chore(ios): Bump amp-rtsp-client to <version>`.
+
+4. Push `ios-xcframework` and wait for the `iOS xcframework CI` workflow to
+   pass. Then fast-forward `main` to it and push `main`:
+
+   ```sh
+   git push origin ios-xcframework
+   git switch main && git merge --ff-only ios-xcframework && git push origin main
+   ```
+
+5. Create and push the annotated release tag:
+
+   ```sh
+   git tag -a amp-rtsp-client-v<version> -m "amp-rtsp-client <version>"
+   git push origin amp-rtsp-client-v<version>
+   ```
+
+6. Watch the tag-triggered `iOS xcframework publish` workflow. It runs the
+   checks, builds the zip on a macOS runner with a pinned Xcode, attests its
+   build provenance, creates a draft release with the zip and `SHA256SUMS`, and
+   checks the uploaded assets' digests:
+
+   ```sh
+   gh run list --workflow ios-xcframework-publish.yml --limit 1
+   gh run watch <run-id> --exit-status
+   ```
+
+7. If the workflow fails, fix `main`, delete the failed local and remote tag
+   (only while no release for it has been published), retag the fixed commit and
+   push the tag again. The workflow only creates releases: if a release for the
+   tag already exists, draft or published, it fails without touching it, so
+   delete a leftover draft by hand before rerunning.
+
+8. Download the draft's assets and verify them:
+
+   ```sh
+   gh release download amp-rtsp-client-v<version> --dir /path/to/scratch
+   shasum -a 256 -c SHA256SUMS
+   gh attestation verify AmpRtspClient-<version>.xcframework.zip --repo mwolson/retina \
+       --signer-workflow mwolson/retina/.github/workflows/ios-xcframework-publish.yml
+   ```
+
+9. Review the commits since the previous release tag and replace the generated
+   draft notes. Start with a short summary, group related changes under
+   descriptive headings, put user-visible changes first and maintenance
+   afterward, and keep a "Full Changelog" compare link when there is a previous
+   release. Leave verification steps and check commands out of the public notes.
+   Then publish:
+
+   ```sh
+   gh release edit amp-rtsp-client-v<version> --notes-file notes.md --draft=false
+   gh release view amp-rtsp-client-v<version> --json isImmutable
+   ```
+
+Consumers pin the release URL and SHA-256, and verify provenance with the
+`gh attestation verify` command above.
 
 `.github/workflows/ios-xcframework-ci.yml` runs the same checks and build for
 pushes and pull requests, and uploads the zip as a workflow artifact only.
